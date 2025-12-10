@@ -56,8 +56,15 @@ class HealthDataWriter {
         let sample: HKObject
 
         if dataTypesDict[type]!.isKind(of: HKCategoryType.self) {
+            // For presence-only category types, force value to notApplicable (0)
+            let categoryValue: Int
+            if type == HealthConstants.INTERMENSTRUAL_BLEEDING {
+                categoryValue = HKCategoryValue.notApplicable.rawValue
+            } else {
+                categoryValue = Int(value)
+            }
             sample = HKCategorySample(
-                type: dataTypesDict[type] as! HKCategoryType, value: Int(value), start: dateFrom,
+                type: dataTypesDict[type] as! HKCategoryType, value: categoryValue, start: dateFrom,
                 end: dateTo, metadata: metadata)
         } else {
             let quantity = HKQuantity(unit: unitDict[unit]!, doubleValue: value)
