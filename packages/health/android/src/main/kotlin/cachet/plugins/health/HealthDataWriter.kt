@@ -878,6 +878,12 @@ class HealthDataWriter(
                                         zoneOffset = null,
                                         metadata = metadata,
                                 )
+                        HealthConstants.INTERMENSTRUAL_BLEEDING ->
+                                IntermenstrualBleedingRecord(
+                                        time = Instant.ofEpochMilli(startTime),
+                                        zoneOffset = null,
+                                        metadata = metadata,
+                                )
                         HealthConstants.SPEED ->
                                 SpeedRecord(
                                         startTime = Instant.ofEpochMilli(startTime),

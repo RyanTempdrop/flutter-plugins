@@ -34,6 +34,7 @@ object HealthConstants {
         const val CERVICAL_MUCUS_QUALITY = "CERVICAL_MUCUS_QUALITY"
         const val OVULATION_TEST_RESULT = "OVULATION_TEST_RESULT"
         const val PREGNANCY_TEST_RESULTS = "PREGNANCY_TEST_RESULTS"
+        const val INTERMENSTRUAL_BLEEDING = "INTERMENSTRUAL_BLEEDING"
         const val RESPIRATORY_RATE = "RESPIRATORY_RATE"
         const val RESTING_HEART_RATE = "RESTING_HEART_RATE"
         const val STEPS = "STEPS"
@@ -112,6 +113,7 @@ object HealthConstants {
                          BASAL_BODY_TEMPERATURE to BasalBodyTemperatureRecord::class,
                         CERVICAL_MUCUS_QUALITY to CervicalMucusRecord::class,
                         OVULATION_TEST_RESULT to OvulationTestRecord::class,
+                        INTERMENSTRUAL_BLEEDING to IntermenstrualBleedingRecord::class,
                         SPEED to SpeedRecord::class,
                 )
 

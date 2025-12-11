@@ -272,6 +272,7 @@ const List<HealthDataType> dataTypeKeysAndroid = [
   HealthDataType.BASAL_BODY_TEMPERATURE,
   HealthDataType.CERVICAL_MUCUS_QUALITY,
   HealthDataType.OVULATION_TEST_RESULT,
+  HealthDataType.INTERMENSTRUAL_BLEEDING,
 ];
 
 /// Maps a [HealthDataType] to a [HealthDataUnit].

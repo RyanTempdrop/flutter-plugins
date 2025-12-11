@@ -198,6 +198,8 @@ class HealthDataConverter {
                     listOf(createInstantRecord(metadata, record.time, record.appearance))
             is OvulationTestRecord ->
                     listOf(createInstantRecord(metadata, record.time, record.result))
+            is IntermenstrualBleedingRecord ->
+                    listOf(createInstantRecord(metadata, record.time, 1))
             is NutritionRecord -> listOf(createNutritionRecord(record, metadata))
             else -> throw IllegalArgumentException("Health data type not supported")
         }
