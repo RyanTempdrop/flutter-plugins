@@ -112,6 +112,18 @@ class HealthDataWriter(
                         "Writing data for $type between $startTime and $endTime, value: $value, recording method: $recordingMethod"
                 )
 
+                // Guard: Check if this is an API 34+ reproductive health type on older Android
+                if (type in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                        !HealthConstants.supportsReproductiveHealthTypes()
+                ) {
+                        Log.w(
+                                "FLUTTER_HEALTH::ERROR",
+                                "$type requires Android 14 (API 34) or higher. Current device is not supported."
+                        )
+                        result.success(false)
+                        return
+                }
+
                 val metadata: Metadata =
                         buildMetadata(
                                 recordingMethod = recordingMethod,
@@ -120,7 +132,18 @@ class HealthDataWriter(
                                 deviceType = deviceType,
                         )
 
-                val record = createRecord(type, startTime, endTime, value, metadata)
+                // Wrap createRecord in try-catch as additional safety net
+                val record =
+                        try {
+                                createRecord(type, startTime, endTime, value, metadata)
+                        } catch (e: Exception) {
+                                Log.e(
+                                        "FLUTTER_HEALTH::ERROR",
+                                        "Error creating record for $type: ${e.message}"
+                                )
+                                result.success(false)
+                                return
+                        }
 
                 if (record == null) {
                         result.success(false)
@@ -319,10 +342,21 @@ class HealthDataWriter(
          * Writes menstrual flow data. Delegates to standard writeData method for
          * MenstruationFlowRecord handling.
          *
+         * Note: MenstruationFlowRecord requires API 34+ (Android 14). Will return false on older devices.
+         *
          * @param call Method call with menstruation flow data
          * @param result Flutter result callback returning success status
          */
         fun writeMenstruationFlow(call: MethodCall, result: Result) {
+                // Guard: MenstruationFlowRecord requires API 34+ (Android 14)
+                if (!HealthConstants.supportsReproductiveHealthTypes()) {
+                        Log.w(
+                                "FLUTTER_HEALTH::ERROR",
+                                "Menstruation flow data requires Android 14 (API 34) or higher. Current device is not supported."
+                        )
+                        result.success(false)
+                        return
+                }
                 writeData(call, result)
         }
 
@@ -331,11 +365,23 @@ class HealthDataWriter(
          * CervicalMucusRecord containing both sensation (texture) and appearance characteristics of
          * cervical mucus.
          *
+         * Note: CervicalMucusRecord requires API 34+ (Android 14). Will return false on older devices.
+         *
          * @param call Method call containing 'sensation', 'appearance', 'startTime',
          * 'recordingMethod'
          * @param result Flutter result callback returning boolean success status
          */
         fun writeCervicalMucusData(call: MethodCall, result: Result) {
+                // Guard: CervicalMucusRecord requires API 34+ (Android 14)
+                if (!HealthConstants.supportsReproductiveHealthTypes()) {
+                        Log.w(
+                                "FLUTTER_HEALTH::ERROR",
+                                "Cervical mucus data requires Android 14 (API 34) or higher. Current device is not supported."
+                        )
+                        result.success(false)
+                        return
+                }
+
                 val sensation = call.argument<Double>("sensation")
                 val appearance = call.argument<Double>("appearance")
                 val startTime = Instant.ofEpochMilli(call.argument<Long>("startTime")!!)
@@ -846,7 +892,7 @@ class HealthDataWriter(
                         HealthConstants.MENSTRUATION_FLOW ->
                                 MenstruationFlowRecord(
                                         time = Instant.ofEpochMilli(startTime),
-                                        flow = value.toInt(),
+                                        flow = value.toMenstruationFlow(),
                                         zoneOffset = null,
                                         metadata = metadata,
                                 )
@@ -1025,6 +1071,27 @@ class HealthDataWriter(
                         OvulationTestRecord.RESULT_HIGH,
                         OvulationTestRecord.RESULT_NEGATIVE -> resultValue
                         else -> OvulationTestRecord.RESULT_INCONCLUSIVE
+                }
+        }
+
+        /**
+         * Normalizes menstruation flow values to supported Health Connect enum constants.
+         * Falls back to FLOW_UNKNOWN when the input is invalid.
+         *
+         * Health Connect API flow constants:
+         * 0 → FLOW_UNKNOWN
+         * 1 → FLOW_LIGHT
+         * 2 → FLOW_MEDIUM
+         * 3 → FLOW_HEAVY
+         */
+        private fun Double.toMenstruationFlow(): Int {
+                val flowValue = this.toInt()
+                return when (flowValue) {
+                        MenstruationFlowRecord.FLOW_UNKNOWN,
+                        MenstruationFlowRecord.FLOW_LIGHT,
+                        MenstruationFlowRecord.FLOW_MEDIUM,
+                        MenstruationFlowRecord.FLOW_HEAVY -> flowValue
+                        else -> MenstruationFlowRecord.FLOW_UNKNOWN
                 }
         }
 

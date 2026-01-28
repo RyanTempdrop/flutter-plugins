@@ -177,6 +177,18 @@ class HealthDataOperations(
         val startTime = Instant.ofEpochMilli(call.argument<Long>("startTime")!!)
         val endTime = Instant.ofEpochMilli(call.argument<Long>("endTime")!!)
 
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (type in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$type requires Android 14 (API 34) or higher. Current device is not supported."
+            )
+            result.success(false)
+            return
+        }
+
         if (!HealthConstants.mapToType.containsKey(type)) {
             Log.w("FLUTTER_HEALTH::ERROR", "Datatype $type not found in HC")
             result.success(false)
@@ -214,6 +226,18 @@ class HealthDataOperations(
         val arguments = call.arguments as? HashMap<*, *>
         val dataTypeKey = (arguments?.get("dataTypeKey") as? String)!!
         val uuid = (arguments?.get("uuid") as? String)!!
+
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (dataTypeKey in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$dataTypeKey requires Android 14 (API 34) or higher. Current device is not supported."
+            )
+            result.success(false)
+            return
+        }
 
         if (!HealthConstants.mapToType.containsKey(dataTypeKey)) {
             Log.w("FLUTTER_HEALTH::ERROR", "Datatype $dataTypeKey not found in HC")
@@ -256,6 +280,19 @@ class HealthDataOperations(
         val dataTypeKey = (arguments?.get("dataTypeKey") as? String)!!
         val recordId = listOfNotNull(arguments["recordId"] as? String)
         val clientRecordId = listOfNotNull(arguments["clientRecordId"] as? String)
+
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (dataTypeKey in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$dataTypeKey requires Android 14 (API 34) or higher. Current device is not supported."
+            )
+            result.success(false)
+            return
+        }
+
         if (!HealthConstants.mapToType.containsKey(dataTypeKey)) {
             Log.w("FLUTTER_HEALTH::ERROR", "Datatype $dataTypeKey not found in HC")
             result.success(false)
@@ -287,6 +324,9 @@ class HealthDataOperations(
      * Internal helper method to prepare Health Connect permission strings. Converts data type names
      * and access levels into proper permission format.
      *
+     * Note: API 34+ reproductive health types are silently skipped on older Android versions
+     * rather than failing, allowing the app to continue working with other health types.
+     *
      * @param types List of health data type strings
      * @param permissions List of permission level integers (0=read, 1=read+write)
      * @return List<String>? Formatted permission strings, or null if invalid input
@@ -298,6 +338,18 @@ class HealthDataOperations(
         val permList = mutableListOf<String>()
 
         for ((i, typeKey) in types.withIndex()) {
+            // Skip API 34+ reproductive health types on older Android versions
+            // instead of failing the entire permission request
+            if (typeKey in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                    !HealthConstants.supportsReproductiveHealthTypes()
+            ) {
+                Log.w(
+                        "FLUTTER_HEALTH",
+                        "Skipping $typeKey permission - requires Android 14 (API 34) or higher"
+                )
+                continue
+            }
+
             if (!HealthConstants.mapToType.containsKey(typeKey)) {
                 Log.w("FLUTTER_HEALTH::ERROR", "Datatype $typeKey not found in HC")
                 return null

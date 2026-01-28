@@ -1,5 +1,6 @@
 package cachet.plugins.health
 
+import android.os.Build
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.MealType
 import kotlin.reflect.KClass
@@ -9,6 +10,17 @@ import kotlin.reflect.KClass
  * throughout the Health Connect integration.
  */
 object HealthConstants {
+
+        /**
+         * Checks if the device supports reproductive health record types.
+         * MenstruationFlowRecord, CervicalMucusRecord, OvulationTestRecord, and
+         * IntermenstrualBleedingRecord were added in API level 34 (Android 14).
+         *
+         * @return Boolean true if API level 34+ (Android 14 Upside Down Cake or higher)
+         */
+        fun supportsReproductiveHealthTypes(): Boolean =
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+
         // Channel name
         const val CHANNEL_NAME = "flutter_health"
 
@@ -67,15 +79,30 @@ object HealthConstants {
         const val WORKOUT = "WORKOUT"
 
         /**
+         * List of reproductive health data types that require API 34+.
+         * These types will cause crashes on Android 13 and below if accessed.
+         */
+        val API_34_REPRODUCTIVE_TYPES = listOf(
+                MENSTRUATION_FLOW,
+                CERVICAL_MUCUS_QUALITY,
+                OVULATION_TEST_RESULT,
+                INTERMENSTRUAL_BLEEDING
+        )
+
+        /**
          * Maps Flutter health data type strings to their corresponding Health Connect Record
          * classes. This mapping enables dynamic type resolution for reading and writing health
          * data.
          *
+         * Note: Reproductive health types (MenstruationFlowRecord, CervicalMucusRecord,
+         * OvulationTestRecord, IntermenstrualBleedingRecord) are only added on API 34+
+         * to prevent crashes on Android 13 and below.
+         *
          * @return Map<String, KClass<out Record>> Mapping of type strings to Health Connect record
          * classes
          */
-        val mapToType: Map<String, KClass<out Record>> =
-                hashMapOf(
+        val mapToType: Map<String, KClass<out Record>> by lazy {
+                val baseMap = hashMapOf(
                         BODY_FAT_PERCENTAGE to BodyFatRecord::class,
                         LEAN_BODY_MASS to LeanBodyMassRecord::class,
                         HEIGHT to HeightRecord::class,
@@ -109,13 +136,21 @@ object HealthConstants {
                         FLIGHTS_CLIMBED to FloorsClimbedRecord::class,
                         RESPIRATORY_RATE to RespiratoryRateRecord::class,
                         TOTAL_CALORIES_BURNED to TotalCaloriesBurnedRecord::class,
-                        MENSTRUATION_FLOW to MenstruationFlowRecord::class,
-                         BASAL_BODY_TEMPERATURE to BasalBodyTemperatureRecord::class,
-                        CERVICAL_MUCUS_QUALITY to CervicalMucusRecord::class,
-                        OVULATION_TEST_RESULT to OvulationTestRecord::class,
-                        INTERMENSTRUAL_BLEEDING to IntermenstrualBleedingRecord::class,
+                        BASAL_BODY_TEMPERATURE to BasalBodyTemperatureRecord::class,
                         SPEED to SpeedRecord::class,
                 )
+
+                // Only add reproductive health types on API 34+ (Android 14+)
+                // These record types don't exist on Android 13 and below
+                if (supportsReproductiveHealthTypes()) {
+                        baseMap[MENSTRUATION_FLOW] = MenstruationFlowRecord::class
+                        baseMap[CERVICAL_MUCUS_QUALITY] = CervicalMucusRecord::class
+                        baseMap[OVULATION_TEST_RESULT] = OvulationTestRecord::class
+                        baseMap[INTERMENSTRUAL_BLEEDING] = IntermenstrualBleedingRecord::class
+                }
+
+                baseMap
+        }
 
         /**
          * Maps health data types to their corresponding aggregate metric types for batch

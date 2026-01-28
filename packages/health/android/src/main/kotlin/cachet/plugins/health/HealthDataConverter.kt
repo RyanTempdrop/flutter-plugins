@@ -1,5 +1,6 @@
 package cachet.plugins.health
 
+import android.util.Log
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.metadata.Metadata
 import java.time.Instant
@@ -190,19 +191,54 @@ class HealthDataConverter {
                                     ChronoUnit.MINUTES.between(record.startTime, record.endTime)
                             )
                     )
-            is MenstruationFlowRecord ->
-                    listOf(createInstantRecord(metadata, record.time, record.flow))
             is BasalBodyTemperatureRecord ->
                     listOf(createInstantRecord(metadata, record.time, record.temperature.inCelsius))
-            is CervicalMucusRecord ->
-                    listOf(createInstantRecord(metadata, record.time, record.appearance))
-            is OvulationTestRecord ->
-                    listOf(createInstantRecord(metadata, record.time, record.result))
-            is IntermenstrualBleedingRecord ->
-                    listOf(createInstantRecord(metadata, record.time, 1))
             is NutritionRecord -> listOf(createNutritionRecord(record, metadata))
-            else -> throw IllegalArgumentException("Health data type not supported")
+            else -> {
+                    // Try to convert API 34+ reproductive health types
+                    // These are handled separately to avoid class loading issues on older Android
+                    if (HealthConstants.supportsReproductiveHealthTypes()) {
+                            try {
+                                    val result = convertReproductiveHealthRecord(record, metadata)
+                                    if (result != null) {
+                                            return result
+                                    }
+                            } catch (e: Exception) {
+                                    Log.e(
+                                            "FLUTTER_HEALTH::ERROR",
+                                            "Error converting reproductive health record: ${e.message}"
+                                    )
+                            }
+                    }
+                    throw IllegalArgumentException("Health data type not supported")
+            }
         }
+    }
+
+    /**
+     * Converts reproductive health records (API 34+ only).
+     * This method is separated to prevent class loading issues on Android 13 and below.
+     * Only call this method after checking HealthConstants.supportsReproductiveHealthTypes().
+     *
+     * @param record The Health Connect record to convert
+     * @param metadata Record metadata
+     * @return List of converted records, or null if not a reproductive health record
+     */
+    private fun convertReproductiveHealthRecord(
+            record: Any,
+            metadata: Metadata
+    ): List<Map<String, Any?>>? {
+            return when (record) {
+                    is MenstruationFlowRecord ->
+                            listOf(createInstantRecord(metadata, record.time, record.flow))
+                    is CervicalMucusRecord ->
+                            listOf(createInstantRecord(metadata, record.time, record.appearance))
+                    is OvulationTestRecord ->
+                            listOf(createInstantRecord(metadata, record.time, record.result))
+                    is IntermenstrualBleedingRecord ->
+                            listOf(createInstantRecord(metadata, record.time, 1))
+                    else -> null
+            }
     }
 
     /**

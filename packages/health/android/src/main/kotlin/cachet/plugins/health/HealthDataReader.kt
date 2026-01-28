@@ -52,6 +52,18 @@ class HealthDataReader(
             "Getting data for $dataType with unit $dataUnit between $startTime and $endTime, filtering by $recordingMethodsToFilter"
         )
 
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (dataType in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$dataType requires Android 14 (API 34) or higher. Returning empty list."
+            )
+            result.success(emptyList<Map<String, Any?>>())
+            return
+        }
+
         scope.launch {
             try {
                 val grantedPermissions = healthConnectClient.permissionController.getGrantedPermissions()
@@ -129,6 +141,18 @@ class HealthDataReader(
         val dataType = call.argument<String>("dataTypeKey")!!
         val uuid = call.argument<String>("uuid")!!
         var healthPoint = mapOf<String, Any?>()
+
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (dataType in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$dataType requires Android 14 (API 34) or higher. Returning null."
+            )
+            result.success(null)
+            return
+        }
 
         if (!HealthConstants.mapToType.containsKey(dataType)) {
             Log.w("FLUTTER_HEALTH::ERROR", "Datatype $dataType not found in HC")
