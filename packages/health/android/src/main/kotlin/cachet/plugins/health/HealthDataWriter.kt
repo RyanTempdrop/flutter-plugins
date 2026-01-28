@@ -152,7 +152,11 @@ class HealthDataWriter(
 
                 scope.launch {
                         try {
-                                healthConnectClient.insertRecords(listOf(record))
+                                HealthConnectRetryHelper.executeWithRetry(
+                                        operationName = "insertRecords($type)"
+                                ) {
+                                        healthConnectClient.insertRecords(listOf(record))
+                                }
                                 result.success(true)
                         } catch (e: Exception) {
                                 Log.e("FLUTTER_HEALTH::ERROR", "Error writing $type: ${e.message}")
@@ -248,7 +252,11 @@ class HealthDataWriter(
                                         )
                                 }
 
-                                healthConnectClient.insertRecords(list)
+                                HealthConnectRetryHelper.executeWithRetry(
+                                        operationName = "insertRecords(workout)"
+                                ) {
+                                        healthConnectClient.insertRecords(list)
+                                }
                                 result.success(true)
                                 Log.i(
                                         "FLUTTER_HEALTH::SUCCESS",
@@ -293,23 +301,27 @@ class HealthDataWriter(
                                                 clientRecordVersion = clientRecordVersion?.toLong(),
                                                 deviceType = deviceType,
                                         )
-                                healthConnectClient.insertRecords(
-                                        listOf(
-                                                BloodPressureRecord(
-                                                        time = startTime,
-                                                        systolic =
-                                                                Pressure.millimetersOfMercury(
-                                                                        systolic
-                                                                ),
-                                                        diastolic =
-                                                                Pressure.millimetersOfMercury(
-                                                                        diastolic
-                                                                ),
-                                                        zoneOffset = null,
-                                                        metadata = metadata,
+                                HealthConnectRetryHelper.executeWithRetry(
+                                        operationName = "insertRecords(bloodPressure)"
+                                ) {
+                                        healthConnectClient.insertRecords(
+                                                listOf(
+                                                        BloodPressureRecord(
+                                                                time = startTime,
+                                                                systolic =
+                                                                        Pressure.millimetersOfMercury(
+                                                                                systolic
+                                                                        ),
+                                                                diastolic =
+                                                                        Pressure.millimetersOfMercury(
+                                                                                diastolic
+                                                                        ),
+                                                                zoneOffset = null,
+                                                                metadata = metadata,
+                                                        ),
                                                 ),
-                                        ),
-                                )
+                                        )
+                                }
                                 result.success(true)
                                 Log.i(
                                         "FLUTTER_HEALTH::SUCCESS",
@@ -399,25 +411,29 @@ class HealthDataWriter(
                                                 clientRecordVersion = clientRecordVersion?.toLong(),
                                                 deviceType = deviceType,
                                         )
-                                healthConnectClient.insertRecords(
-                                        listOf(
-                                                CervicalMucusRecord(
-                                                        time = startTime,
-                                                        zoneOffset = null,
-                                                        metadata = metadata,
-                                                        sensation =
-                                                                sensation
-                                                                        ?.toCervicalMucusSensation()
-                                                                        ?: CervicalMucusRecord
-                                                                                .SENSATION_UNKNOWN,
-                                                        appearance =
-                                                                appearance
-                                                                        ?.toCervicalMucusAppearance()
-                                                                        ?: CervicalMucusRecord
-                                                                                .APPEARANCE_UNKNOWN,
+                                HealthConnectRetryHelper.executeWithRetry(
+                                        operationName = "insertRecords(cervicalMucus)"
+                                ) {
+                                        healthConnectClient.insertRecords(
+                                                listOf(
+                                                        CervicalMucusRecord(
+                                                                time = startTime,
+                                                                zoneOffset = null,
+                                                                metadata = metadata,
+                                                                sensation =
+                                                                        sensation
+                                                                                ?.toCervicalMucusSensation()
+                                                                                ?: CervicalMucusRecord
+                                                                                        .SENSATION_UNKNOWN,
+                                                                appearance =
+                                                                        appearance
+                                                                                ?.toCervicalMucusAppearance()
+                                                                                ?: CervicalMucusRecord
+                                                                                        .APPEARANCE_UNKNOWN,
+                                                        ),
                                                 ),
-                                        ),
-                                )
+                                        )
+                                }
                                 result.success(true)
                                 Log.i(
                                         "FLUTTER_HEALTH::SUCCESS",
@@ -563,7 +579,11 @@ class HealthDataWriter(
                                                                 ?: MealType.MEAL_TYPE_UNKNOWN
                                         ),
                                 )
-                                healthConnectClient.insertRecords(list)
+                                HealthConnectRetryHelper.executeWithRetry(
+                                        operationName = "insertRecords(meal)"
+                                ) {
+                                        healthConnectClient.insertRecords(list)
+                                }
                                 result.success(true)
                                 Log.i(
                                         "FLUTTER_HEALTH::SUCCESS",
@@ -632,7 +652,11 @@ class HealthDataWriter(
                                                 metadata = metadata,
                                         )
 
-                                healthConnectClient.insertRecords(listOf(speedRecord))
+                                HealthConnectRetryHelper.executeWithRetry(
+                                        operationName = "insertRecords(speed)"
+                                ) {
+                                        healthConnectClient.insertRecords(listOf(speedRecord))
+                                }
                                 result.success(true)
                                 Log.i(
                                         "FLUTTER_HEALTH::SUCCESS",
