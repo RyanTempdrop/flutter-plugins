@@ -11,6 +11,7 @@
 .svn/
 .build/
 .swiftpm/
+Package.resolved
 build/
 
 # IntelliJ related

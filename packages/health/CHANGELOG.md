@@ -1,3 +1,7 @@
+## Unreleased
+
+* iOS: Add Swift Package Manager (SPM) support alongside CocoaPods. Resolves the "plugin does not support Swift Package Manager" warning under Flutter 3.44+. Ported from [carp-health-flutter#504](https://github.com/carp-dk/carp-health-flutter/pull/504).
+
 ## 13.2.0
 
 * Add get health data by UUID (see `getHealthDataByUUID()`) - PR [#1193](https://github.com/carp-dk/flutter-plugins/pull/1193), [#1194](https://github.com/carp-dk/flutter-plugins/pull/1194)
