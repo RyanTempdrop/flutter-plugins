@@ -102,6 +102,11 @@ enum HealthDataType {
   BIRTH_DATE,
   BLOOD_TYPE,
   MENSTRUATION_FLOW,
+  BASAL_BODY_TEMPERATURE,
+  CERVICAL_MUCUS_QUALITY,
+  OVULATION_TEST_RESULT,
+  PREGNANCY_TEST_RESULTS,
+  INTERMENSTRUAL_BLEEDING,
   WATER_TEMPERATURE,
   UNDERWATER_DEPTH,
 
@@ -117,11 +122,7 @@ enum HealthDataType {
 }
 
 /// Access types for Health Data.
-enum HealthDataAccess {
-  READ,
-  WRITE,
-  READ_WRITE,
-}
+enum HealthDataAccess { READ, WRITE, READ_WRITE }
 
 /// List of data types available on iOS.
 const List<HealthDataType> dataTypeKeysIOS = [
@@ -220,6 +221,11 @@ const List<HealthDataType> dataTypeKeysIOS = [
   HealthDataType.BIRTH_DATE,
   HealthDataType.BLOOD_TYPE,
   HealthDataType.MENSTRUATION_FLOW,
+  HealthDataType.BASAL_BODY_TEMPERATURE,
+  HealthDataType.CERVICAL_MUCUS_QUALITY,
+  HealthDataType.OVULATION_TEST_RESULT,
+  HealthDataType.PREGNANCY_TEST_RESULTS,
+  HealthDataType.INTERMENSTRUAL_BLEEDING,
   HealthDataType.WATER_TEMPERATURE,
   HealthDataType.UNDERWATER_DEPTH,
   HealthDataType.UV_INDEX,
@@ -263,6 +269,10 @@ const List<HealthDataType> dataTypeKeysAndroid = [
   HealthDataType.NUTRITION,
   HealthDataType.TOTAL_CALORIES_BURNED,
   HealthDataType.MENSTRUATION_FLOW,
+  HealthDataType.BASAL_BODY_TEMPERATURE,
+  HealthDataType.CERVICAL_MUCUS_QUALITY,
+  HealthDataType.OVULATION_TEST_RESULT,
+  HealthDataType.INTERMENSTRUAL_BLEEDING,
 ];
 
 /// Maps a [HealthDataType] to a [HealthDataUnit].
@@ -378,6 +388,11 @@ const Map<HealthDataType, HealthDataUnit> dataTypeToUnit = {
 
   HealthDataType.NUTRITION: HealthDataUnit.NO_UNIT,
   HealthDataType.MENSTRUATION_FLOW: HealthDataUnit.NO_UNIT,
+  HealthDataType.BASAL_BODY_TEMPERATURE: HealthDataUnit.DEGREE_CELSIUS,
+  HealthDataType.CERVICAL_MUCUS_QUALITY: HealthDataUnit.NO_UNIT,
+  HealthDataType.OVULATION_TEST_RESULT: HealthDataUnit.NO_UNIT,
+  HealthDataType.PREGNANCY_TEST_RESULTS: HealthDataUnit.NO_UNIT,
+  HealthDataType.INTERMENSTRUAL_BLEEDING: HealthDataUnit.NO_UNIT,
   HealthDataType.WATER_TEMPERATURE: HealthDataUnit.DEGREE_CELSIUS,
   HealthDataType.UNDERWATER_DEPTH: HealthDataUnit.METER,
   HealthDataType.UV_INDEX: HealthDataUnit.COUNT,
@@ -587,13 +602,7 @@ enum HealthWorkoutActivityType {
   OTHER,
 }
 
-enum MealType {
-  BREAKFAST,
-  LUNCH,
-  DINNER,
-  SNACK,
-  UNKNOWN,
-}
+enum MealType { BREAKFAST, LUNCH, DINNER, SNACK, UNKNOWN }
 
 /// Classifications for ECG readings.
 enum ElectrocardiogramClassification {
@@ -608,23 +617,19 @@ enum ElectrocardiogramClassification {
 }
 
 /// Types of insulin delivery reason
-enum InsulinDeliveryReason {
-  NOT_SET,
-  BASAL,
-  BOLUS,
-}
+enum InsulinDeliveryReason { NOT_SET, BASAL, BOLUS }
 
 /// Extension to assign numbers to [ElectrocardiogramClassification]s
 extension ElectrocardiogramClassificationValue
     on ElectrocardiogramClassification {
   int get value => switch (this) {
-        ElectrocardiogramClassification.NOT_SET => 0,
-        ElectrocardiogramClassification.SINUS_RHYTHM => 1,
-        ElectrocardiogramClassification.ATRIAL_FIBRILLATION => 2,
-        ElectrocardiogramClassification.INCONCLUSIVE_LOW_HEART_RATE => 3,
-        ElectrocardiogramClassification.INCONCLUSIVE_HIGH_HEART_RATE => 4,
-        ElectrocardiogramClassification.INCONCLUSIVE_POOR_READING => 5,
-        ElectrocardiogramClassification.INCONCLUSIVE_OTHER => 6,
-        ElectrocardiogramClassification.UNRECOGNIZED => 100,
-      };
+    ElectrocardiogramClassification.NOT_SET => 0,
+    ElectrocardiogramClassification.SINUS_RHYTHM => 1,
+    ElectrocardiogramClassification.ATRIAL_FIBRILLATION => 2,
+    ElectrocardiogramClassification.INCONCLUSIVE_LOW_HEART_RATE => 3,
+    ElectrocardiogramClassification.INCONCLUSIVE_HIGH_HEART_RATE => 4,
+    ElectrocardiogramClassification.INCONCLUSIVE_POOR_READING => 5,
+    ElectrocardiogramClassification.INCONCLUSIVE_OTHER => 6,
+    ElectrocardiogramClassification.UNRECOGNIZED => 100,
+  };
 }

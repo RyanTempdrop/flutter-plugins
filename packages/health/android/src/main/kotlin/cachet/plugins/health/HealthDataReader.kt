@@ -52,9 +52,25 @@ class HealthDataReader(
             "Getting data for $dataType with unit $dataUnit between $startTime and $endTime, filtering by $recordingMethodsToFilter"
         )
 
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (dataType in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$dataType requires Android 14 (API 34) or higher. Returning empty list."
+            )
+            result.success(emptyList<Map<String, Any?>>())
+            return
+        }
+
         scope.launch {
             try {
-                val grantedPermissions = healthConnectClient.permissionController.getGrantedPermissions()
+                val grantedPermissions = HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "getGrantedPermissions"
+                ) {
+                    healthConnectClient.permissionController.getGrantedPermissions()
+                }
 
                 val authorizedTypeMap = HealthConstants.mapToType.filter { (typeKey, classType) ->
                     val requiredPermission = HealthPermission.getReadPermission(classType)
@@ -70,7 +86,11 @@ class HealthDataReader(
                         timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
                     )
 
-                    var response = healthConnectClient.readRecords(request)
+                    var response = HealthConnectRetryHelper.executeWithRetry(
+                        operationName = "readRecords($dataType)"
+                    ) {
+                        healthConnectClient.readRecords(request)
+                    }
                     var pageToken = response.pageToken
 
                     // Add the records from the initial response
@@ -83,7 +103,11 @@ class HealthDataReader(
                             timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
                             pageToken = pageToken
                         )
-                        response = healthConnectClient.readRecords(request)
+                        response = HealthConnectRetryHelper.executeWithRetry(
+                            operationName = "readRecords($dataType) page"
+                        ) {
+                            healthConnectClient.readRecords(request)
+                        }
                         pageToken = response.pageToken
                         records.addAll(response.records)
                     }
@@ -130,6 +154,18 @@ class HealthDataReader(
         val uuid = call.argument<String>("uuid")!!
         var healthPoint = mapOf<String, Any?>()
 
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (dataType in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$dataType requires Android 14 (API 34) or higher. Returning null."
+            )
+            result.success(null)
+            return
+        }
+
         if (!HealthConstants.mapToType.containsKey(dataType)) {
             Log.w("FLUTTER_HEALTH::ERROR", "Datatype $dataType not found in HC")
             result.success(null)
@@ -143,8 +179,12 @@ class HealthDataReader(
 
                 Log.i("FLUTTER_HEALTH", "Getting $uuid with $classType")
 
-                // Execute the request
-                val response = healthConnectClient.readRecord(classType, uuid)
+                // Execute the request with retry logic
+                val response = HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "readRecord($dataType, $uuid)"
+                ) {
+                    healthConnectClient.readRecord(classType, uuid)
+                }
 
                 // Find the record with the matching UUID
                 val matchingRecord = response.record
@@ -211,7 +251,11 @@ class HealthDataReader(
                         timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
                         timeRangeSlicer = Duration.ofSeconds(interval)
                     )
-                    val response = healthConnectClient.aggregateGroupByDuration(request)
+                    val response = HealthConnectRetryHelper.executeWithRetry(
+                        operationName = "aggregateGroupByDuration($dataType)"
+                    ) {
+                        healthConnectClient.aggregateGroupByDuration(request)
+                    }
 
                     for (durationResult in response) {
                         var totalValue = durationResult.result[metricClassType]
@@ -294,12 +338,16 @@ class HealthDataReader(
         
         scope.launch {
             try {
-                val response = healthConnectClient.aggregate(
-                    AggregateRequest(
-                        metrics = setOf(StepsRecord.COUNT_TOTAL),
-                        timeRangeFilter = TimeRangeFilter.between(startInstant, endInstant),
-                    ),
-                )
+                val response = HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "aggregate(steps)"
+                ) {
+                    healthConnectClient.aggregate(
+                        AggregateRequest(
+                            metrics = setOf(StepsRecord.COUNT_TOTAL),
+                            timeRangeFilter = TimeRangeFilter.between(startInstant, endInstant),
+                        ),
+                    )
+                }
                 val stepsInInterval = response[StepsRecord.COUNT_TOTAL] ?: 0L
 
                 Log.i("FLUTTER_HEALTH::SUCCESS", "returning $stepsInInterval steps")
@@ -339,7 +387,11 @@ class HealthDataReader(
                         Instant.ofEpochMilli(end)
                     ),
                 )
-                val response = healthConnectClient.readRecords(request)
+                val response = HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "readRecords(steps filtered)"
+                ) {
+                    healthConnectClient.readRecords(request)
+                }
                 val filteredRecords = recordingFilter.filterRecordsByRecordingMethods(
                     recordingMethodsToFilter,
                     response.records
@@ -388,46 +440,58 @@ class HealthDataReader(
         for (rec in filteredRecords) {
             val record = rec as ExerciseSessionRecord
             
-            // Get distance data
-            val distanceRequest = healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    recordType = DistanceRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(
-                        record.startTime,
-                        record.endTime,
+            // Get distance data with retry
+            val distanceRequest = HealthConnectRetryHelper.executeWithRetry(
+                operationName = "readRecords(distance for workout)"
+            ) {
+                healthConnectClient.readRecords(
+                    ReadRecordsRequest(
+                        recordType = DistanceRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(
+                            record.startTime,
+                            record.endTime,
+                        ),
                     ),
-                ),
-            )
+                )
+            }
             var totalDistance = 0.0
             for (distanceRec in distanceRequest.records) {
                 totalDistance += distanceRec.distance.inMeters
             }
 
-            // Get energy burned data
-            val energyBurnedRequest = healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    recordType = TotalCaloriesBurnedRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(
-                        record.startTime,
-                        record.endTime,
+            // Get energy burned data with retry
+            val energyBurnedRequest = HealthConnectRetryHelper.executeWithRetry(
+                operationName = "readRecords(calories for workout)"
+            ) {
+                healthConnectClient.readRecords(
+                    ReadRecordsRequest(
+                        recordType = TotalCaloriesBurnedRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(
+                            record.startTime,
+                            record.endTime,
+                        ),
                     ),
-                ),
-            )
+                )
+            }
             var totalEnergyBurned = 0.0
             for (energyBurnedRec in energyBurnedRequest.records) {
                 totalEnergyBurned += energyBurnedRec.energy.inKilocalories
             }
 
-            // Get steps data
-            val stepRequest = healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    recordType = StepsRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(
-                        record.startTime,
-                        record.endTime
+            // Get steps data with retry
+            val stepRequest = HealthConnectRetryHelper.executeWithRetry(
+                operationName = "readRecords(steps for workout)"
+            ) {
+                healthConnectClient.readRecords(
+                    ReadRecordsRequest(
+                        recordType = StepsRecord::class,
+                        timeRangeFilter = TimeRangeFilter.between(
+                            record.startTime,
+                            record.endTime
+                        ),
                     ),
-                ),
-            )
+                )
+            }
             var totalSteps = 0.0
             for (stepRec in stepRequest.records) {
                 totalSteps += stepRec.count

@@ -56,8 +56,15 @@ class HealthDataWriter {
         let sample: HKObject
 
         if dataTypesDict[type]!.isKind(of: HKCategoryType.self) {
+            // For presence-only category types, force value to notApplicable (0)
+            let categoryValue: Int
+            if type == HealthConstants.INTERMENSTRUAL_BLEEDING {
+                categoryValue = HKCategoryValue.notApplicable.rawValue
+            } else {
+                categoryValue = Int(value)
+            }
             sample = HKCategorySample(
-                type: dataTypesDict[type] as! HKCategoryType, value: Int(value), start: dateFrom,
+                type: dataTypesDict[type] as! HKCategoryType, value: categoryValue, start: dateFrom,
                 end: dateTo, metadata: metadata)
         } else {
             let quantity = HKQuantity(unit: unitDict[unit]!, doubleValue: value)
@@ -332,6 +339,58 @@ class HealthDataWriter {
             withCompletion: { (success, error) in
                 if let err = error {
                     print("Error Saving Menstruation Flow Sample: \(err.localizedDescription)")
+                }
+                DispatchQueue.main.async {
+                    result(success)
+                }
+            })
+    }
+
+    /// Writes cervical mucus quality data
+    /// - Parameters:
+    ///   - call: Flutter method call
+    ///   - result: Flutter result callback
+    func writeCervicalMucus(call: FlutterMethodCall, result: @escaping FlutterResult) throws {
+        guard let arguments = call.arguments as? NSDictionary,
+            let appearance = (arguments["appearance"] as? Double),
+            let startTime = (arguments["startTime"] as? NSNumber),
+            let recordingMethod = (arguments["recordingMethod"] as? Int)
+        else {
+            throw PluginError(
+                message: "Invalid Arguments - appearance or startTime invalid")
+        }
+        
+        let appearanceInt = Int(appearance)
+        guard let cervicalMucusQuality = HKCategoryValueCervicalMucusQuality(rawValue: appearanceInt) else {
+            throw PluginError(message: "Invalid Cervical Mucus Quality Type: \(appearanceInt)")
+        }
+
+        let dateTime = HealthUtilities.dateFromMilliseconds(startTime.doubleValue)
+
+        let isManualEntry = recordingMethod == HealthConstants.RecordingMethod.manual.rawValue
+
+        guard let categoryType = HKSampleType.categoryType(forIdentifier: .cervicalMucusQuality) else {
+            throw PluginError(message: "Invalid Cervical Mucus Quality Type")
+        }
+
+        let metadata =
+            [
+                HKMetadataKeyWasUserEntered: NSNumber(value: isManualEntry),
+            ] as [String: Any]
+
+        let sample = HKCategorySample(
+            type: categoryType,
+            value: cervicalMucusQuality.rawValue,
+            start: dateTime,
+            end: dateTime,
+            metadata: metadata
+        )
+
+        healthStore.save(
+            sample,
+            withCompletion: { (success, error) in
+                if let err = error {
+                    print("Error Saving Cervical Mucus Sample: \(err.localizedDescription)")
                 }
                 DispatchQueue.main.async {
                     result(success)

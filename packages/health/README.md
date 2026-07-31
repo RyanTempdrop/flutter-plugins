@@ -1,5 +1,7 @@
 # Health
 
+<!-- ryanTempdrop: Last updated Tue Dec 10 2025 - COMPLETE with regenerated health.g.dart - iOS & Android implementation for BASAL_BODY_TEMPERATURE, CERVICAL_MUCUS_QUALITY, OVULATION_TEST_RESULT (iOS only: PREGNANCY_TEST_RESULTS, INTERMENSTRUAL_BLEEDING) - Full read/write support -->
+
 Enables reading and writing health data from/to [Apple Health](https://www.apple.com/health/) and [Google Health Connect](https://health.google/health-connect-android/).
 
 > **NOTE:** Google has deprecated the Google Fit API. According to the [documentation](https://developers.google.com/fit/android), as of **May 1st 2024** developers cannot sign up for using the API. As such, this package has removed support for Google Fit as of version 11.0.0 and users are urged to upgrade as soon as possible.
@@ -275,15 +277,18 @@ flutter:  PlatformException(FlutterHealth, Results are null, Optional(Error Doma
 In order to retrieve a single record, it is required to provide `String uuid` and `HealthDataType type`.
 
 Please see example below:
+
 ```dart
 HealthDataPoint? healthPoint = await health.getHealthDataByUUID(
   uuid: 'random-uuid-string',
   type: HealthDataType.STEPS,
 );
 ```
+
 ```
 I/FLUTTER_HEALTH( 9161): Success: {uuid=random-uuid-string, value=12, date_from=1742259061009, date_to=1742259092888, source_id=, source_name=com.google.android.apps.fitness, recording_method=0}
 ```
+
 > Assuming that the `uuid` and `type` are coming from your database.
 
 ### Filtering by recording method
@@ -328,12 +333,16 @@ points = health.removeDuplicates(points);
 ```
 
 ### Android: Reading Health Data in Background
+
 Currently health connect allows apps to read health data in the background. In order to achieve this add the following permission to your `AndroidManifest.XML`:
+
 ```XML
 <!-- For reading data in background -->
 <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"/>
 ```
+
 Furthermore, the plugin now exposes three new functions to help you check and request access to read data in the background:
+
 1. `isHealthDataInBackgroundAvailable()`: Checks if the Health Data in Background feature is available
 2. `isHealthDataInBackgroundAuthorized()`: Checks the current status of the Health Data in Background permission
 3. `requestHealthDataInBackgroundAuthorization()`: Requests the Health Data in Background permission.
@@ -343,12 +352,14 @@ Furthermore, the plugin now exposes three new functions to help you check and re
 In order to retrieve a single record, it is required to provide `String uuid` and `HealthDataType type`.
 
 Please see example below:
+
 ```dart
 HealthDataPoint? healthPoint = await health.getHealthDataByUUID(
   uuid: 'E9F2EEAD-8FC5-4CE5-9FF5-7C4E535FB8B8',
   type: HealthDataType.WORKOUT,
 );
 ```
+
 ```
 data by UUID: HealthDataPoint -
     uuid: E9F2EEAD-8FC5-4CE5-9FF5-7C4E535FB8B8,
@@ -372,8 +383,8 @@ data by UUID: HealthDataPoint -
     metadata: null
     deviceModel: null
 ```
-> Assuming that the `uuid` and `type` are coming from your database.
 
+> Assuming that the `uuid` and `type` are coming from your database.
 
 ## Data Types
 

@@ -54,12 +54,17 @@ class HealthDataOperations(
         }
 
         scope.launch {
-            result.success(
-                    healthConnectClient
-                            .permissionController
-                            .getGrantedPermissions()
-                            .containsAll(permList),
-            )
+            try {
+                val grantedPermissions = HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "getGrantedPermissions(hasPermissions)"
+                ) {
+                    healthConnectClient.permissionController.getGrantedPermissions()
+                }
+                result.success(grantedPermissions.containsAll(permList))
+            } catch (e: Exception) {
+                Log.e("FLUTTER_HEALTH::ERROR", "Error checking permissions: ${e.message}")
+                result.success(false)
+            }
         }
     }
 
@@ -89,10 +94,19 @@ class HealthDataOperations(
      */
     fun revokePermissions(call: MethodCall, result: Result) {
         scope.launch {
-            Log.i("FLUTTER_HEALTH", "Revoking all Health Connect permissions")
-            healthConnectClient.permissionController.revokeAllPermissions()
+            try {
+                Log.i("FLUTTER_HEALTH", "Revoking all Health Connect permissions")
+                HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "revokeAllPermissions"
+                ) {
+                    healthConnectClient.permissionController.revokeAllPermissions()
+                }
+                result.success(true)
+            } catch (e: Exception) {
+                Log.e("FLUTTER_HEALTH::ERROR", "Error revoking permissions: ${e.message}")
+                result.success(false)
+            }
         }
-        result.success(true)
     }
 
     /**
@@ -104,11 +118,19 @@ class HealthDataOperations(
      */
     fun isHealthDataHistoryAvailable(call: MethodCall, result: Result) {
         scope.launch {
-            result.success(
+            try {
+                val status = HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "getFeatureStatus(history)"
+                ) {
                     healthConnectClient.features.getFeatureStatus(
-                            HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY
-                    ) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
-            )
+                        HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY
+                    )
+                }
+                result.success(status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE)
+            } catch (e: Exception) {
+                Log.e("FLUTTER_HEALTH::ERROR", "Error checking history availability: ${e.message}")
+                result.success(false)
+            }
         }
     }
 
@@ -121,12 +143,17 @@ class HealthDataOperations(
      */
     fun isHealthDataHistoryAuthorized(call: MethodCall, result: Result) {
         scope.launch {
-            result.success(
-                    healthConnectClient
-                            .permissionController
-                            .getGrantedPermissions()
-                            .containsAll(listOf(PERMISSION_READ_HEALTH_DATA_HISTORY)),
-            )
+            try {
+                val grantedPermissions = HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "getGrantedPermissions(historyAuthorized)"
+                ) {
+                    healthConnectClient.permissionController.getGrantedPermissions()
+                }
+                result.success(grantedPermissions.containsAll(listOf(PERMISSION_READ_HEALTH_DATA_HISTORY)))
+            } catch (e: Exception) {
+                Log.e("FLUTTER_HEALTH::ERROR", "Error checking history authorization: ${e.message}")
+                result.success(false)
+            }
         }
     }
 
@@ -139,11 +166,19 @@ class HealthDataOperations(
      */
     fun isHealthDataInBackgroundAvailable(call: MethodCall, result: Result) {
         scope.launch {
-            result.success(
+            try {
+                val status = HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "getFeatureStatus(background)"
+                ) {
                     healthConnectClient.features.getFeatureStatus(
-                            HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND
-                    ) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
-            )
+                        HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_IN_BACKGROUND
+                    )
+                }
+                result.success(status == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE)
+            } catch (e: Exception) {
+                Log.e("FLUTTER_HEALTH::ERROR", "Error checking background availability: ${e.message}")
+                result.success(false)
+            }
         }
     }
 
@@ -156,12 +191,17 @@ class HealthDataOperations(
      */
     fun isHealthDataInBackgroundAuthorized(call: MethodCall, result: Result) {
         scope.launch {
-            result.success(
-                    healthConnectClient
-                            .permissionController
-                            .getGrantedPermissions()
-                            .containsAll(listOf(PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)),
-            )
+            try {
+                val grantedPermissions = HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "getGrantedPermissions(backgroundAuthorized)"
+                ) {
+                    healthConnectClient.permissionController.getGrantedPermissions()
+                }
+                result.success(grantedPermissions.containsAll(listOf(PERMISSION_READ_HEALTH_DATA_IN_BACKGROUND)))
+            } catch (e: Exception) {
+                Log.e("FLUTTER_HEALTH::ERROR", "Error checking background authorization: ${e.message}")
+                result.success(false)
+            }
         }
     }
 
@@ -177,6 +217,18 @@ class HealthDataOperations(
         val startTime = Instant.ofEpochMilli(call.argument<Long>("startTime")!!)
         val endTime = Instant.ofEpochMilli(call.argument<Long>("endTime")!!)
 
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (type in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$type requires Android 14 (API 34) or higher. Current device is not supported."
+            )
+            result.success(false)
+            return
+        }
+
         if (!HealthConstants.mapToType.containsKey(type)) {
             Log.w("FLUTTER_HEALTH::ERROR", "Datatype $type not found in HC")
             result.success(false)
@@ -187,10 +239,14 @@ class HealthDataOperations(
 
         scope.launch {
             try {
-                healthConnectClient.deleteRecords(
+                HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "deleteRecords($type)"
+                ) {
+                    healthConnectClient.deleteRecords(
                         recordType = classType,
                         timeRangeFilter = TimeRangeFilter.between(startTime, endTime),
-                )
+                    )
+                }
                 result.success(true)
                 Log.i(
                         "FLUTTER_HEALTH::SUCCESS",
@@ -215,6 +271,18 @@ class HealthDataOperations(
         val dataTypeKey = (arguments?.get("dataTypeKey") as? String)!!
         val uuid = (arguments?.get("uuid") as? String)!!
 
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (dataTypeKey in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$dataTypeKey requires Android 14 (API 34) or higher. Current device is not supported."
+            )
+            result.success(false)
+            return
+        }
+
         if (!HealthConstants.mapToType.containsKey(dataTypeKey)) {
             Log.w("FLUTTER_HEALTH::ERROR", "Datatype $dataTypeKey not found in HC")
             result.success(false)
@@ -225,11 +293,15 @@ class HealthDataOperations(
 
         scope.launch {
             try {
-                healthConnectClient.deleteRecords(
+                HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "deleteRecords(uuid: $uuid)"
+                ) {
+                    healthConnectClient.deleteRecords(
                         recordType = classType,
                         recordIdsList = listOf(uuid),
                         clientRecordIdsList = emptyList()
-                )
+                    )
+                }
                 result.success(true)
                 Log.i(
                         "FLUTTER_HEALTH::SUCCESS",
@@ -256,6 +328,19 @@ class HealthDataOperations(
         val dataTypeKey = (arguments?.get("dataTypeKey") as? String)!!
         val recordId = listOfNotNull(arguments["recordId"] as? String)
         val clientRecordId = listOfNotNull(arguments["clientRecordId"] as? String)
+
+        // Guard: Check if this is an API 34+ reproductive health type on older Android
+        if (dataTypeKey in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                !HealthConstants.supportsReproductiveHealthTypes()
+        ) {
+            Log.w(
+                    "FLUTTER_HEALTH::ERROR",
+                    "$dataTypeKey requires Android 14 (API 34) or higher. Current device is not supported."
+            )
+            result.success(false)
+            return
+        }
+
         if (!HealthConstants.mapToType.containsKey(dataTypeKey)) {
             Log.w("FLUTTER_HEALTH::ERROR", "Datatype $dataTypeKey not found in HC")
             result.success(false)
@@ -265,11 +350,15 @@ class HealthDataOperations(
 
         scope.launch {
             try {
-                healthConnectClient.deleteRecords(
+                HealthConnectRetryHelper.executeWithRetry(
+                    operationName = "deleteRecords(clientRecordId: $clientRecordId)"
+                ) {
+                    healthConnectClient.deleteRecords(
                         classType,
                         recordId,
                         clientRecordId
-                )
+                    )
+                }
                 result.success(true)
             } catch (e: Exception) {
                 Log.e(
@@ -287,6 +376,9 @@ class HealthDataOperations(
      * Internal helper method to prepare Health Connect permission strings. Converts data type names
      * and access levels into proper permission format.
      *
+     * Note: API 34+ reproductive health types are silently skipped on older Android versions
+     * rather than failing, allowing the app to continue working with other health types.
+     *
      * @param types List of health data type strings
      * @param permissions List of permission level integers (0=read, 1=read+write)
      * @return List<String>? Formatted permission strings, or null if invalid input
@@ -298,6 +390,18 @@ class HealthDataOperations(
         val permList = mutableListOf<String>()
 
         for ((i, typeKey) in types.withIndex()) {
+            // Skip API 34+ reproductive health types on older Android versions
+            // instead of failing the entire permission request
+            if (typeKey in HealthConstants.API_34_REPRODUCTIVE_TYPES &&
+                    !HealthConstants.supportsReproductiveHealthTypes()
+            ) {
+                Log.w(
+                        "FLUTTER_HEALTH",
+                        "Skipping $typeKey permission - requires Android 14 (API 34) or higher"
+                )
+                continue
+            }
+
             if (!HealthConstants.mapToType.containsKey(typeKey)) {
                 Log.w("FLUTTER_HEALTH::ERROR", "Datatype $typeKey not found in HC")
                 return null

@@ -2,7 +2,13 @@ import Flutter
 import HealthKit
 import UIKit
 
-/// Main plugin class that coordinates health data operations
+/// Main plugin class that coordinates health data operations.
+///
+/// Exposed to the Objective-C runtime as `HealthPlugin` (the `pluginClass`
+/// declared in pubspec.yaml) via `@objc(HealthPlugin)`, so Flutter's
+/// GeneratedPluginRegistrant can find and register it under both Swift
+/// Package Manager and CocoaPods without a separate Objective-C shim.
+@objc(HealthPlugin)
 public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     
     // Health store and type dictionaries
@@ -143,6 +149,15 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         case "writeMenstruationFlow":
             do {
                 try healthDataWriter.writeMenstruationFlow(call: call, result: result)
+            } catch {
+                result(FlutterError(code: "WRITE_ERROR",
+                                    message: "Error writing menstruation flow: \(error.localizedDescription)",
+                                    details: nil))
+            }
+            
+        case "writeCervicalMucus":
+            do {
+                try healthDataWriter.writeCervicalMucus(call: call, result: result)
             } catch {
                 result(FlutterError(code: "WRITE_ERROR",
                                     message: "Error writing menstruation flow: \(error.localizedDescription)",
@@ -327,7 +342,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         dataQuantityTypesDict[HealthConstants.LEAN_BODY_MASS] = HKSampleType.quantityType(forIdentifier: .leanBodyMass)!
         dataQuantityTypesDict[HealthConstants.BODY_MASS_INDEX] = HKQuantityType.quantityType(forIdentifier: .bodyMassIndex)!
         dataQuantityTypesDict[HealthConstants.BODY_TEMPERATURE] = HKQuantityType.quantityType(forIdentifier: .bodyTemperature)!
-        
+        dataQuantityTypesDict[HealthConstants.BASAL_BODY_TEMPERATURE] = HKQuantityType.quantityType(forIdentifier: .basalBodyTemperature)!
+
         // Initialize nutrition quantity types
         initializeNutritionQuantityTypes()
         
@@ -409,6 +425,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         dataTypesDict[HealthConstants.LEAN_BODY_MASS] = HKSampleType.quantityType(forIdentifier: .leanBodyMass)!
         dataTypesDict[HealthConstants.BODY_MASS_INDEX] = HKSampleType.quantityType(forIdentifier: .bodyMassIndex)!
         dataTypesDict[HealthConstants.BODY_TEMPERATURE] = HKSampleType.quantityType(forIdentifier: .bodyTemperature)!
+        dataTypesDict[HealthConstants.BASAL_BODY_TEMPERATURE] = HKSampleType.quantityType(forIdentifier: .basalBodyTemperature)!
         
         // Initialize nutrition types
         initializeNutritionTypes()
@@ -436,6 +453,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         dataTypesDict[HealthConstants.SLEEP_REM] = HKSampleType.categoryType(forIdentifier: .sleepAnalysis)!
         dataTypesDict[HealthConstants.SLEEP_ASLEEP] = HKSampleType.categoryType(forIdentifier: .sleepAnalysis)!
         dataTypesDict[HealthConstants.MENSTRUATION_FLOW] = HKSampleType.categoryType(forIdentifier: .menstrualFlow)!
+        dataTypesDict[HealthConstants.CERVICAL_MUCUS_QUALITY] = HKSampleType.categoryType(forIdentifier: .cervicalMucusQuality)!
+        dataTypesDict[HealthConstants.OVULATION_TEST_RESULT] = HKSampleType.categoryType(forIdentifier: .ovulationTestResult)!
+        dataTypesDict[HealthConstants.PREGNANCY_TEST_RESULTS] = HKSampleType.categoryType(forIdentifier: .pregnancyTestResult)!
+        dataTypesDict[HealthConstants.INTERMENSTRUAL_BLEEDING] = HKSampleType.categoryType(forIdentifier: .intermenstrualBleeding)!
         
         dataTypesDict[HealthConstants.EXERCISE_TIME] = HKSampleType.quantityType(forIdentifier: .appleExerciseTime)!
         dataTypesDict[HealthConstants.WORKOUT] = HKSampleType.workoutType()
