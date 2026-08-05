@@ -293,7 +293,7 @@ class HealthDataConverter {
     private fun createBaseRecord(metadata: Metadata): MutableMap<String, Any?> =
             mutableMapOf(
                     "uuid" to metadata.id,
-                    "source_id" to "",
+                    "source_id" to metadata.dataOrigin.packageName,
                     "source_name" to metadata.dataOrigin.packageName,
                     "recording_method" to metadata.recordingMethod
             )
@@ -396,8 +396,9 @@ class HealthDataConverter {
                         "value" to ChronoUnit.MINUTES.between(stage.startTime, stage.endTime),
                         "date_from" to stage.startTime.toEpochMilli(),
                         "date_to" to stage.endTime.toEpochMilli(),
-                        "source_id" to "",
+                        "source_id" to metadata.dataOrigin.packageName,
                         "source_name" to metadata.dataOrigin.packageName,
+                        "recording_method" to metadata.recordingMethod,
                 )
         )
     }

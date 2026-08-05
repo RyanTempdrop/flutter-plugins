@@ -515,7 +515,7 @@ class HealthDataReader(
                     "unit" to "MINUTES",
                     "date_from" to record.startTime.toEpochMilli(),
                     "date_to" to record.endTime.toEpochMilli(),
-                    "source_id" to "",
+                    "source_id" to record.metadata.dataOrigin.packageName,
                     "source_name" to record.metadata.dataOrigin.packageName,
                 ),
             )
